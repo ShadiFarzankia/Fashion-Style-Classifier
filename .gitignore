@@ -1,0 +1,7 @@
+
+*.pdf
+*.json
+.venv/
+/venv/
+__pycache__/
+
