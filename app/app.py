@@ -1,42 +1,23 @@
 import streamlit as st
 from PIL import Image
 import base64
-from io import BytesIO
 import torch
-import os
-import time
-from torchvision.models import efficientnet_b0
+from io import BytesIO
 import torchvision.transforms as transforms
 
-# -----------------------------
-# Utility to convert image to base64 (for HTML styling)
-# -----------------------------
-def image_to_base64(image):
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
-
-# -----------------------------
-# Load your model
-# -----------------------------
+# Load your full model directly
 @st.cache_resource
 def load_model():
-    model = efficientnet_b0(pretrained=False)
-    model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, 5)
-    model.load_state_dict(torch.load("app/efficientnet_fashion_model.pth", map_location="cpu"))
+    model = torch.load("efficientnet_fashion_model_full.pth", map_location=torch.device('cpu'))
     model.eval()
     return model
 
-# -----------------------------
-# Load class labels
-# -----------------------------
+# Replace with your own labels
 @st.cache_data
 def load_labels():
     return ["sporty", "vintage", "formal", "casual", "streetwear"]
 
-# -----------------------------
-# Image pre-processing
-# -----------------------------
+# Image transform
 transform = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -45,51 +26,52 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
-# -----------------------------
 # Streamlit UI
-# -----------------------------
-st.set_page_config(page_title="Fashion Style Classifier", layout="centered")
 st.title("👗 Fashion Style Classifier")
-st.write("Upload a fashion image to classify it into one of the predefined styles.")
+st.write("Upload a fashion image to classify it using EfficientNet.")
 
-uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+def image_to_base64(image):
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    return img_str
+
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
-
-    # Styled image preview
+    # Convert image to base64
     img_base64 = image_to_base64(image)
+
+    # Display styled image using HTML
     st.markdown(
         f"""
         <div style="text-align:center;">
             <img src="data:image/png;base64,{img_base64}"
-                 style="border: 4px solid #4CAF50;
-                        border-radius: 15px;
+                 style="border-radius: 15px;
                         box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
-                        width: 80%;
-                        max-width: 400px;" />
-            <p style="font-size:16px; color: #555;">Uploaded Image</p>
+                        width: 50%;
+                        max-width: 500px;" />
+            <p style="color: #555; font-size: 16px;">Uploaded Image</p>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    st.write("🧠 Classifying...")
+    st.write("Classifying...")
 
-    # Load model and labels with timing
-    start_time = time.time()
+    # Preprocess
+    input_tensor = transform(image).unsqueeze(0)
+
+    # Predict
     model = load_model()
     labels = load_labels()
-    st.write(f"✅ Model loaded in `{time.time() - start_time:.2f}` seconds.")
 
-    # Prediction
-    input_tensor = transform(image).unsqueeze(0)
     with torch.no_grad():
         output = model(input_tensor)
         probabilities = torch.nn.functional.softmax(output[0], dim=0)
-        top_prob, top_idx = torch.topk(probabilities, 1)
+        top_prob, top_catid = torch.topk(probabilities, 1)
+        predicted_label = labels[top_catid]
 
-    predicted_label = labels[top_idx.item()]
-    confidence = top_prob.item()
-
-    st.success(f"🎉 **Prediction:** `{predicted_label}` with `{confidence:.2%}` confidence.")
+    st.success(f"**Prediction:** {predicted_label} ({top_prob.item():.2%} confidence)")
