@@ -13,7 +13,7 @@ def load_model():
     model_path = os.path.abspath(os.path.join("app", model_filename))
     print("Model path:", model_path)
 
-    model = torch.load(model_path, map_location=torch.device('cpu'))
+    model = torch.load(model_path, map_location=torch.device('cpu'), weights_only=False)
     model.eval()
     return model
 
