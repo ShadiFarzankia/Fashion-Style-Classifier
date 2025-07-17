@@ -9,8 +9,8 @@ import torchvision.transforms as transforms
 # Load your full model directly
 @st.cache_resource
 def load_model():
-    model_filename = "app/efficientnet_fashion_model_full.pth"
-    model_path = os.path.abspath(model_filename)
+    model_filename = "efficientnet_fashion_model_full.pth"
+    model_path = 'app/' + os.path.abspath(model_filename)
     print("Model path:", model_path)
 
     model = torch.load(model_path, map_location=torch.device('cpu'))
