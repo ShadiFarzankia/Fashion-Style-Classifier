@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 # Load your full model directly
 @st.cache_resource
 def load_model():
-    model = torch.load("efficientnet_fashion_model_full.pth", map_location=torch.device('cpu'))
+    model = torch.load("app/efficientnet_fashion_model_full.pth", map_location=torch.device('cpu'))
     model.eval()
     return model
 
