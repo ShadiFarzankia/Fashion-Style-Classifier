@@ -21,14 +21,9 @@ def image_to_base64(image):
 # -----------------------------
 @st.cache_resource
 def load_model():
-    model_path = "app/efficientnet_fashion_model.pth"
-
-    if not os.path.exists(model_path):
-        raise FileNotFoundError("Model file not found. Make sure it's at app/efficientnet_fashion_model.pth")
-
     model = efficientnet_b0(pretrained=False)
     model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, 5)
-    model.load_state_dict(torch.load(model_path, map_location="cpu"))
+    model.load_state_dict(torch.load("app/efficientnet_fashion_model.pth", map_location="cpu"))
     model.eval()
     return model
 
