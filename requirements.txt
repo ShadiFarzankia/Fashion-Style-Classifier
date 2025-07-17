@@ -1,11 +1,6 @@
-pandas
-numpy
+jupyter
 matplotlib
 scikit-learn
-tensorflow
-jupyter
+pandas
+numpy
 label-studio
-streamlit
-torch
-torchvision
-Pillow
