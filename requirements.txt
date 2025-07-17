@@ -5,3 +5,7 @@ scikit-learn
 tensorflow
 jupyter
 label-studio
+streamlit
+torch
+torchvision
+Pillow
