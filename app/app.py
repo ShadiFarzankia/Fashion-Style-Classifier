@@ -3,35 +3,45 @@ from PIL import Image
 import base64
 from io import BytesIO
 import torch
-import timm
-import torchvision.transforms as transforms
 import os
+import time
+from torchvision.models import efficientnet_b0
+import torchvision.transforms as transforms
 
-# Function to convert image to base64 for HTML styling
+# -----------------------------
+# Utility to convert image to base64 (for HTML styling)
+# -----------------------------
 def image_to_base64(image):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-# Load EfficientNet-B0 with correct number of output classes
+# -----------------------------
+# Load your model
+# -----------------------------
 @st.cache_resource
 def load_model():
     model_path = "app/efficientnet_fashion_model.pth"
-    
-    if not os.path.exists(model_path):
-        raise FileNotFoundError("Model file not found. Make sure efficientnet_fashion_model.pth is in the app/ folder.")
 
-    model = timm.create_model("efficientnet_b0", pretrained=False, num_classes=5)
+    if not os.path.exists(model_path):
+        raise FileNotFoundError("Model file not found. Make sure it's at app/efficientnet_fashion_model.pth")
+
+    model = efficientnet_b0(pretrained=False)
+    model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, 5)
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     model.eval()
     return model
 
-# Define your labels
+# -----------------------------
+# Load class labels
+# -----------------------------
 @st.cache_data
 def load_labels():
     return ["sporty", "vintage", "formal", "casual", "streetwear"]
 
-# Preprocessing
+# -----------------------------
+# Image pre-processing
+# -----------------------------
 transform = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -40,16 +50,19 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
+# -----------------------------
 # Streamlit UI
+# -----------------------------
+st.set_page_config(page_title="Fashion Style Classifier", layout="centered")
 st.title("👗 Fashion Style Classifier")
-st.write("Upload an image of an outfit and get its fashion style prediction.")
+st.write("Upload a fashion image to classify it into one of the predefined styles.")
 
 uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
 
-    # Show styled image
+    # Styled image preview
     img_base64 = image_to_base64(image)
     st.markdown(
         f"""
@@ -68,11 +81,13 @@ if uploaded_file is not None:
 
     st.write("🧠 Classifying...")
 
-    # Load model and labels
+    # Load model and labels with timing
+    start_time = time.time()
     model = load_model()
     labels = load_labels()
+    st.write(f"✅ Model loaded in `{time.time() - start_time:.2f}` seconds.")
 
-    # Transform and predict
+    # Prediction
     input_tensor = transform(image).unsqueeze(0)
     with torch.no_grad():
         output = model(input_tensor)
@@ -82,4 +97,4 @@ if uploaded_file is not None:
     predicted_label = labels[top_idx.item()]
     confidence = top_prob.item()
 
-    st.success(f"**Prediction:** `{predicted_label}` with `{confidence:.2%}` confidence.")
+    st.success(f"🎉 **Prediction:** `{predicted_label}` with `{confidence:.2%}` confidence.")
